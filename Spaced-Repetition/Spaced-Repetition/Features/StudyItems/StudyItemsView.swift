@@ -11,17 +11,14 @@ import ComposableArchitecture
 struct StudyItemsView: View {
     @Bindable var store: StoreOf<StudyItemsFeature>
     @State private var showMenu = false
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     
     var body: some View {
-        #if os(iOS)
-        if UIDevice.current.userInterfaceIdiom == .pad {
+        if horizontalSizeClass == .regular {
             iPadLayout
         } else {
             iPhoneLayout
         }
-        #else
-        iPhoneLayout
-        #endif
     }
     
     // MARK: - iPad Layout

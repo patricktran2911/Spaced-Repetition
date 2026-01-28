@@ -15,12 +15,7 @@ struct StudyItemDetailView: View {
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
     @State private var showingPDFPicker = false
     @State private var showFullScreenPDF = false
-    
-    #if os(iOS)
-    private var isIPad: Bool {
-        UIDevice.current.userInterfaceIdiom == .pad
-    }
-    #endif
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     
     var body: some View {
         ScrollView {
@@ -45,9 +40,7 @@ struct StudyItemDetailView: View {
                 }
             }
             .padding()
-            #if os(iOS)
-            .frame(maxWidth: isIPad ? 800 : .infinity)
-            #endif
+            .frame(maxWidth: horizontalSizeClass == .regular ? 800 : .infinity)
             .frame(maxWidth: .infinity)
         }
         .navigationTitle(store.isEditing ? "Edit Item" : store.item.title)

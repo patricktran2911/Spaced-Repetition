@@ -10,23 +10,14 @@ import ComposableArchitecture
 
 struct LectureReviewView: View {
     @Bindable var store: StoreOf<LectureReviewFeature>
-    
-    #if os(iOS)
-    private var isIPad: Bool {
-        UIDevice.current.userInterfaceIdiom == .pad
-    }
-    #endif
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     
     var body: some View {
-        #if os(iOS)
-        if isIPad {
+        if horizontalSizeClass == .regular {
             iPadLayout
         } else {
             iPhoneLayout
         }
-        #else
-        iPhoneLayout
-        #endif
     }
     
     // MARK: - iPad Layout
@@ -85,10 +76,7 @@ struct LectureReviewView: View {
     private var iPhoneLayout: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // Filter picker
                 filterPicker
-                
-                // Content
                 lectureContent
             }
             .navigationTitle("Review")

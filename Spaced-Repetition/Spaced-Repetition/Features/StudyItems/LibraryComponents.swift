@@ -66,6 +66,7 @@ struct LibraryMenuRow: View {
 struct LibraryContentView: View {
     let item: StudyItemState
     let onEdit: () -> Void
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     
     var body: some View {
         ScrollView {
@@ -144,9 +145,10 @@ struct LibraryContentView: View {
             }
             .padding()
             #if os(iOS)
-            .frame(maxWidth: UIDevice.current.userInterfaceIdiom == .pad ? 900 : .infinity)
-            #endif
             .frame(maxWidth: .infinity)
+            #elseif os(iPadOS)
+            .frame(maxWidth: 900)
+            #endif
         }
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 0) {

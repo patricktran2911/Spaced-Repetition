@@ -10,6 +10,7 @@ import ComposableArchitecture
 
 struct StatsView: View {
     @Bindable var store: StoreOf<StatsFeature>
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     
     var body: some View {
         NavigationStack {
@@ -32,9 +33,7 @@ struct StatsView: View {
                         tipsSection
                     }
                     .padding()
-                    #if os(iOS)
-                    .frame(maxWidth: UIDevice.current.userInterfaceIdiom == .pad ? 900 : .infinity)
-                    #endif
+                    .frame(maxWidth: horizontalSizeClass == .regular ? 900 : .infinity)
                     .frame(maxWidth: .infinity)
                 }
             }
@@ -50,11 +49,7 @@ struct StatsView: View {
     
     // MARK: - Overview Section
     private var overviewSection: some View {
-        #if os(iOS)
-        let columns = UIDevice.current.userInterfaceIdiom == .pad ? 4 : 2
-        #else
-        let columns = 2
-        #endif
+        let columns = horizontalSizeClass == .regular ? 4 : 2
         let gridItems = Array(repeating: GridItem(.flexible(), spacing: 12), count: columns)
         
         return LazyVGrid(columns: gridItems, spacing: 12) {

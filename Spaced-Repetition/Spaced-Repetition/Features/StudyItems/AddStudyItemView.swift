@@ -15,6 +15,7 @@ struct AddStudyItemView: View {
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
     @State private var showingPDFPicker = false
     @FocusState private var focusedField: Field?
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     
     enum Field {
         case title, content, tag
@@ -56,12 +57,10 @@ struct AddStudyItemView: View {
                 tagsSection
             }
         }
-        #if os(iOS)
-        .frame(maxWidth: UIDevice.current.userInterfaceIdiom == .pad ? 700 : .infinity)
+        .frame(maxWidth: horizontalSizeClass == .regular ? 700 : .infinity)
         .frame(maxWidth: .infinity)
-        .scrollContentBackground(UIDevice.current.userInterfaceIdiom == .pad ? .hidden : .automatic)
-        .background(UIDevice.current.userInterfaceIdiom == .pad ? Color(.systemGroupedBackground) : Color.clear)
-        #endif
+        .scrollContentBackground(horizontalSizeClass == .regular ? .hidden : .automatic)
+        .background(horizontalSizeClass == .regular ? Color(.systemGroupedBackground) : Color.clear)
         .navigationTitle("New Study Item")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
