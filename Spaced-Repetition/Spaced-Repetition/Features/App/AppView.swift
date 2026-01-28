@@ -44,7 +44,17 @@ struct AppView: View {
     }
 }
 
-#Preview {
+#Preview("iPhone") {
+    AppView(
+        store: Store(initialState: AppFeature.State()) {
+            AppFeature()
+        } withDependencies: {
+            $0.databaseClient = .previewValue
+        }
+    )
+}
+
+#Preview("iPad") {
     AppView(
         store: Store(initialState: AppFeature.State()) {
             AppFeature()

@@ -13,11 +13,48 @@ struct StudyItemsView: View {
     @State private var showMenu = false
     
     var body: some View {
+        #if os(iOS)
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            iPadLayout
+        } else {
+            iPhoneLayout
+        }
+        #else
+        iPhoneLayout
+        #endif
+    }
+    
+    // MARK: - iPad Layout
+    private var iPadLayout: some View {
+        NavigationSplitView {
+            libraryList
+                .navigationTitle("Library")
+                .toolbar {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button {
+                            store.send(.addItemTapped)
+                        } label: {
+                            Image(systemName: "plus")
+                        }
+                    }
+                }
+        } detail: {
+            detailContent
+        }
+        .onAppear { store.send(.onAppear) }
+        .sheet(item: $store.scope(state: \.addItem, action: \.addItem)) { addStore in
+            NavigationStack { AddStudyItemView(store: addStore) }
+        }
+        .sheet(item: $store.scope(state: \.detail, action: \.detail)) { detailStore in
+            NavigationStack { StudyItemDetailView(store: detailStore) }
+        }
+    }
+    
+    // MARK: - iPhone Layout
+    private var iPhoneLayout: some View {
         ZStack {
-            // Main content
             mainContent
             
-            // Full screen slide menu
             if showMenu {
                 fullScreenMenu
                     .transition(.move(edge: .leading))
@@ -33,7 +70,81 @@ struct StudyItemsView: View {
         }
     }
     
-    // MARK: - Main Content
+    // MARK: - Library List (iPad Sidebar)
+    private var libraryList: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 10) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+                TextField("Search lectures...", text: $store.searchText)
+                if !store.searchText.isEmpty {
+                    Button { store.searchText = "" } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .padding(12)
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .padding(.horizontal)
+            .padding(.vertical, 12)
+            
+            Divider()
+            
+            if store.isLoading {
+                ProgressView("Loading...")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if store.items.isEmpty {
+                emptyLibraryView
+            } else if store.filteredItems.isEmpty && !store.searchText.isEmpty {
+                VStack(spacing: 16) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 40))
+                        .foregroundStyle(.tertiary)
+                    Text("No results found")
+                        .font(.headline)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding()
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        ForEach(store.filteredItems) { item in
+                            LibraryMenuRow(item: item, isSelected: store.selectedItemId == item.id)
+                                .onTapGesture {
+                                    store.send(.selectItem(item.id))
+                                }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // MARK: - Detail Content (iPad)
+    @ViewBuilder
+    private var detailContent: some View {
+        if store.isLoading {
+            ProgressView("Loading...")
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if let item = store.selectedItem {
+            NavigationStack {
+                LibraryContentView(item: item) {
+                    store.send(.editItemTapped(item))
+                }
+                .navigationTitle(item.title)
+                .navigationBarTitleDisplayMode(.inline)
+            }
+        } else if store.items.isEmpty {
+            emptyStateView
+        } else {
+            selectLecturePrompt
+        }
+    }
+    
+    // MARK: - Main Content (iPhone)
     private var mainContent: some View {
         NavigationStack {
             Group {
@@ -79,7 +190,6 @@ struct StudyItemsView: View {
     // MARK: - Full Screen Menu
     private var fullScreenMenu: some View {
         VStack(spacing: 0) {
-            // Header
             HStack {
                 Text("Library")
                     .font(.largeTitle.bold())
@@ -95,7 +205,6 @@ struct StudyItemsView: View {
             .padding()
             .padding(.top, 8)
             
-            // Search bar
             HStack(spacing: 10) {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
@@ -115,10 +224,8 @@ struct StudyItemsView: View {
             
             Divider()
             
-            // List with Add button at top
             ScrollView {
                 LazyVStack(spacing: 0) {
-                    // Add new lecture button
                     Button {
                         store.send(.addItemTapped)
                         withAnimation { showMenu = false }
@@ -146,7 +253,6 @@ struct StudyItemsView: View {
                     
                     Divider().padding(.leading, 68)
                     
-                    // Lectures list
                     if store.filteredItems.isEmpty && !store.searchText.isEmpty {
                         VStack(spacing: 16) {
                             Image(systemName: "magnifyingglass")
@@ -179,6 +285,25 @@ struct StudyItemsView: View {
                     }
                 }
         )
+    }
+    
+    // MARK: - Empty Library View
+    private var emptyLibraryView: some View {
+        VStack(spacing: 24) {
+            Image(systemName: "books.vertical")
+                .font(.system(size: 70))
+                .foregroundStyle(.blue.opacity(0.6))
+            
+            Text("Your Library is Empty")
+                .font(.title2.bold())
+            
+            Text("Start building your knowledge base\nby adding your first lecture.")
+                .font(.body)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding()
     }
     
     // MARK: - Empty State

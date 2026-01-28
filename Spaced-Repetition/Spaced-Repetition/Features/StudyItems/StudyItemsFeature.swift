@@ -132,6 +132,7 @@ struct StudyItemsFeature {
                 return .send(.refreshItems)
                 
             case .detail(.presented(.delegate(.itemUpdated))):
+                state.detail = nil
                 return .send(.refreshItems)
                 
             case .detail(.presented(.delegate(.itemDeleted))):

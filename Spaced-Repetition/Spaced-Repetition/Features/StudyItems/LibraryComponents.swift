@@ -143,6 +143,10 @@ struct LibraryContentView: View {
                 Spacer(minLength: 120)
             }
             .padding()
+            #if os(iOS)
+            .frame(maxWidth: UIDevice.current.userInterfaceIdiom == .pad ? 900 : .infinity)
+            #endif
+            .frame(maxWidth: .infinity)
         }
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 0) {

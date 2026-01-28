@@ -11,20 +11,85 @@ import ComposableArchitecture
 struct LectureReviewView: View {
     @Bindable var store: StoreOf<LectureReviewFeature>
     
+    #if os(iOS)
+    private var isIPad: Bool {
+        UIDevice.current.userInterfaceIdiom == .pad
+    }
+    #endif
+    
     var body: some View {
+        #if os(iOS)
+        if isIPad {
+            iPadLayout
+        } else {
+            iPhoneLayout
+        }
+        #else
+        iPhoneLayout
+        #endif
+    }
+    
+    // MARK: - iPad Layout
+    private var iPadLayout: some View {
+        NavigationSplitView {
+            filterSidebar
+                .navigationTitle("Review")
+        } detail: {
+            NavigationStack {
+                lectureContent
+                    .navigationTitle(store.filter.rawValue)
+                    .searchable(text: $store.searchText, prompt: "Search lectures...")
+            }
+        }
+        .onAppear { store.send(.onAppear) }
+        .onDisappear { store.send(.onDisappear) }
+        .sheet(isPresented: $store.showingReviewSheet) {
+            if let item = store.selectedItem {
+                LectureDetailSheet(
+                    item: item,
+                    onDismiss: { store.send(.dismissItem) },
+                    onMarkReviewed: { quality in store.send(.markAsReviewed(quality: quality)) }
+                )
+            }
+        }
+    }
+    
+    // MARK: - Filter Sidebar (iPad)
+    private var filterSidebar: some View {
+        List {
+            ForEach(LectureReviewFeature.State.Filter.allCases, id: \.self) { filter in
+                Button {
+                    store.send(.setFilter(filter))
+                } label: {
+                    HStack {
+                        Label(filter.rawValue, systemImage: filter.icon)
+                        Spacer()
+                        if filter == .due && store.dueCount > 0 {
+                            Text("\(store.dueCount)")
+                                .font(.caption.bold())
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.orange)
+                                .clipShape(Capsule())
+                        }
+                    }
+                }
+                .listRowBackground(store.filter == filter ? Color.accentColor.opacity(0.15) : Color.clear)
+                .foregroundStyle(store.filter == filter ? Color.accentColor : .primary)
+            }
+        }
+    }
+    
+    // MARK: - iPhone Layout
+    private var iPhoneLayout: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 // Filter picker
                 filterPicker
                 
                 // Content
-                if store.isLoading {
-                    LoadingStateView(message: "Loading lectures...")
-                } else if store.filteredItems.isEmpty {
-                    emptyStateView
-                } else {
-                    lectureList
-                }
+                lectureContent
             }
             .navigationTitle("Review")
             .searchable(text: $store.searchText, prompt: "Search lectures...")
@@ -42,7 +107,19 @@ struct LectureReviewView: View {
         }
     }
     
-    // MARK: - Filter Picker
+    // MARK: - Lecture Content (Shared)
+    @ViewBuilder
+    private var lectureContent: some View {
+        if store.isLoading {
+            LoadingStateView(message: "Loading lectures...")
+        } else if store.filteredItems.isEmpty {
+            emptyStateView
+        } else {
+            lectureList
+        }
+    }
+    
+    // MARK: - Filter Picker (iPhone)
     private var filterPicker: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 12) {

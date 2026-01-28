@@ -32,6 +32,10 @@ struct StatsView: View {
                         tipsSection
                     }
                     .padding()
+                    #if os(iOS)
+                    .frame(maxWidth: UIDevice.current.userInterfaceIdiom == .pad ? 900 : .infinity)
+                    #endif
+                    .frame(maxWidth: .infinity)
                 }
             }
             .navigationTitle("Statistics")
@@ -46,38 +50,41 @@ struct StatsView: View {
     
     // MARK: - Overview Section
     private var overviewSection: some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 12) {
-                StatCard(
-                    title: "Total Items",
-                    value: "\(store.totalItems)",
-                    icon: "book.fill",
-                    color: .blue
-                )
-                
-                StatCard(
-                    title: "Due Today",
-                    value: "\(store.dueToday)",
-                    icon: "clock.fill",
-                    color: store.dueToday > 0 ? .orange : .green
-                )
-            }
+        #if os(iOS)
+        let columns = UIDevice.current.userInterfaceIdiom == .pad ? 4 : 2
+        #else
+        let columns = 2
+        #endif
+        let gridItems = Array(repeating: GridItem(.flexible(), spacing: 12), count: columns)
+        
+        return LazyVGrid(columns: gridItems, spacing: 12) {
+            StatCard(
+                title: "Total Items",
+                value: "\(store.totalItems)",
+                icon: "book.fill",
+                color: .blue
+            )
             
-            HStack(spacing: 12) {
-                StatCard(
-                    title: "Total Reviews",
-                    value: "\(store.totalReviews)",
-                    icon: "checkmark.circle.fill",
-                    color: .green
-                )
-                
-                StatCard(
-                    title: "Avg. Ease",
-                    value: String(format: "%.2f", store.averageEaseFactor),
-                    icon: "speedometer",
-                    color: .purple
-                )
-            }
+            StatCard(
+                title: "Due Today",
+                value: "\(store.dueToday)",
+                icon: "clock.fill",
+                color: store.dueToday > 0 ? .orange : .green
+            )
+            
+            StatCard(
+                title: "Total Reviews",
+                value: "\(store.totalReviews)",
+                icon: "checkmark.circle.fill",
+                color: .green
+            )
+            
+            StatCard(
+                title: "Avg. Ease",
+                value: String(format: "%.2f", store.averageEaseFactor),
+                icon: "speedometer",
+                color: .purple
+            )
         }
     }
     

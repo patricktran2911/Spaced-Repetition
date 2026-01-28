@@ -12,6 +12,7 @@ struct ReviewView: View {
     @Bindable var store: StoreOf<ReviewFeature>
     @State private var cardRotation: Double = 0
     @State private var showFullScreenPDF = false
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     
     var body: some View {
         VStack(spacing: 0) {
@@ -29,6 +30,8 @@ struct ReviewView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+                .frame(maxWidth: horizontalSizeClass == .regular ? 800 : .infinity)
+                .frame(maxWidth: .infinity)
             }
             
             Divider()

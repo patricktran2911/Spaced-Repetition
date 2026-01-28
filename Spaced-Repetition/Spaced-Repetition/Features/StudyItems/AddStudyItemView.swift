@@ -56,6 +56,12 @@ struct AddStudyItemView: View {
                 tagsSection
             }
         }
+        #if os(iOS)
+        .frame(maxWidth: UIDevice.current.userInterfaceIdiom == .pad ? 700 : .infinity)
+        .frame(maxWidth: .infinity)
+        .scrollContentBackground(UIDevice.current.userInterfaceIdiom == .pad ? .hidden : .automatic)
+        .background(UIDevice.current.userInterfaceIdiom == .pad ? Color(.systemGroupedBackground) : Color.clear)
+        #endif
         .navigationTitle("New Study Item")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
