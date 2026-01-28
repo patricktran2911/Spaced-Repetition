@@ -108,7 +108,7 @@ struct StudyItemDetailFeature {
                 let tags = updatedItem.tags
                 
                 return .run { send in
-                    let itemToSave = StudyItemState(
+                    let itemToSave = await StudyItemState(
                         id: id,
                         title: title,
                         content: content,

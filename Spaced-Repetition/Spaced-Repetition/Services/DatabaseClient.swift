@@ -172,10 +172,10 @@ extension DatabaseClient: DependencyKey {
     )
     
     static let previewValue = DatabaseClient(
-        fetchStudyItems: { [StudyItemState(title: "Swift Basics", content: "Swift is a powerful programming language."), StudyItemState(title: "SwiftUI", content: "SwiftUI is a declarative framework.")] },
-        fetchStudyItem: { _ in StudyItemState(title: "Test", content: "Content") },
+        fetchStudyItems: { await [StudyItemState(title: "Swift Basics", content: "Swift is a powerful programming language."), StudyItemState(title: "SwiftUI", content: "SwiftUI is a declarative framework.")] },
+        fetchStudyItem: { _ in await StudyItemState(title: "Test", content: "Content") },
         saveStudyItem: { _ in }, deleteStudyItem: { _ in }, updateStudyItem: { _ in },
-        fetchDueItems: { [StudyItemState(title: "Due Item", content: "This item is due for review.")] },
+        fetchDueItems: { await [StudyItemState(title: "Due Item", content: "This item is due for review.")] },
         saveReviewSession: { _, _, _ in }, fetchReviewSessions: { _ in [] },
         studyItemsStream: { AsyncStream { $0.yield([StudyItemState(title: "Preview", content: "Content")]) } }
     )

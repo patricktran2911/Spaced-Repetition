@@ -60,7 +60,7 @@ struct ReviewQueueFeature {
                 
             case .subscribeToItems:
                 return .run { send in
-                    let stream = databaseClient.studyItemsStream()
+                    let stream = await databaseClient.studyItemsStream()
                     for await items in stream {
                         // Filter to only due items
                         let dueItems = items.filter { $0.nextReviewDate <= Date() }
@@ -71,7 +71,7 @@ struct ReviewQueueFeature {
                 
             case let .streamUpdated(items):
                 state.isLoading = false
-                let previousCount = state.dueItems.count
+                _ = state.dueItems.count
                 state.dueItems = IdentifiedArray(uniqueElements: items)
                 // Reset index if the list changed significantly
                 if state.currentReviewIndex >= state.dueItems.count {

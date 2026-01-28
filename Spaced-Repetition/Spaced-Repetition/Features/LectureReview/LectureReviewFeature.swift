@@ -45,7 +45,7 @@ struct LectureReviewFeature {
                 items = allItems
             case .recent:
                 // Items reviewed in the last 7 days
-                let weekAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
+                let _ = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
                 items = allItems.filter { $0.reviewCount > 0 }.sorted { $0.nextReviewDate > $1.nextReviewDate }
             }
             
@@ -90,7 +90,7 @@ struct LectureReviewFeature {
             case .onAppear:
                 state.isLoading = true
                 return .run { send in
-                    let stream = databaseClient.studyItemsStream()
+                    let stream = await databaseClient.studyItemsStream()
                     for await items in stream {
                         await send(.streamUpdated(items))
                     }
@@ -152,7 +152,7 @@ struct LectureReviewFeature {
                 let createdAt = updatedItem.createdAt
                 
                 return .run { send in
-                    let itemToSave = StudyItemState(
+                    let itemToSave = await StudyItemState(
                         id: itemId,
                         title: title,
                         content: content,

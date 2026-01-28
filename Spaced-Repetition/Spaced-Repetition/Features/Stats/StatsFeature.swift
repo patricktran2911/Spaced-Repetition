@@ -71,9 +71,9 @@ struct StatsFeature {
                 return .cancel(id: "statsItemsStream")
                 
             case .subscribeToItems:
-                let currentDate = now
+                _ = now
                 return .run { send in
-                    let stream = databaseClient.studyItemsStream()
+                    let stream = await databaseClient.studyItemsStream()
                     for await items in stream {
                         await send(.streamUpdated(items))
                     }

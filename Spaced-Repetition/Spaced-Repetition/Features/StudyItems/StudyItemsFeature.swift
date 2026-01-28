@@ -46,6 +46,7 @@ struct StudyItemsFeature {
         case addItemTapped
         case deleteItem(id: UUID)
         case itemTapped(StudyItemState)
+        case editItemTapped(StudyItemState)
         case selectItem(UUID?)
         case addItem(PresentationAction<AddStudyItemFeature.Action>)
         case detail(PresentationAction<StudyItemDetailFeature.Action>)
@@ -103,6 +104,18 @@ struct StudyItemsFeature {
             case let .itemTapped(item):
                 state.selectedItemId = item.id
                 state.detail = StudyItemDetailFeature.State(item: item)
+                return .none
+                
+            case let .editItemTapped(item):
+                state.selectedItemId = item.id
+                var detailState = StudyItemDetailFeature.State(item: item)
+                detailState.isEditing = true
+                detailState.editedTitle = item.title
+                detailState.editedContent = item.content
+                detailState.editedTags = item.tags
+                detailState.editedImagesData = item.imagesData
+                detailState.editedPdfData = item.pdfData
+                state.detail = detailState
                 return .none
                 
             case let .selectItem(id):

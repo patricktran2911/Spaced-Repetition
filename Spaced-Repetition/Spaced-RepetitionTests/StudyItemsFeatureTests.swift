@@ -13,10 +13,9 @@ import XCTest
 final class StudyItemsFeatureTests: XCTestCase {
     
     func testOnAppearLoadsItems() async {
-        let mockItems = [
-            StudyItemState(id: UUID(), title: "Test 1", content: "Content 1"),
-            StudyItemState(id: UUID(), title: "Test 2", content: "Content 2")
-        ]
+        let item1 = StudyItemState(id: UUID(), title: "Test 1", content: "Content 1")
+        let item2 = StudyItemState(id: UUID(), title: "Test 2", content: "Content 2")
+        let mockItems = [item1, item2]
         
         let store = TestStore(initialState: StudyItemsFeature.State()) {
             StudyItemsFeature()
@@ -31,6 +30,7 @@ final class StudyItemsFeatureTests: XCTestCase {
         await store.receive(\.itemsLoaded) {
             $0.isLoading = false
             $0.items = IdentifiedArray(uniqueElements: mockItems)
+            $0.selectedItemId = item1.id  // Auto-selects first item
         }
     }
     
@@ -71,6 +71,7 @@ final class StudyItemsFeatureTests: XCTestCase {
         }
         
         await store.send(.itemTapped(mockItem)) {
+            $0.selectedItemId = mockItem.id
             $0.detail = StudyItemDetailFeature.State(item: mockItem)
         }
     }
@@ -106,9 +107,8 @@ final class StudyItemsFeatureTests: XCTestCase {
     }
     
     func testRefreshItems() async {
-        let mockItems = [
-            StudyItemState(id: UUID(), title: "Refreshed", content: "Content")
-        ]
+        let item = StudyItemState(id: UUID(), title: "Refreshed", content: "Content")
+        let mockItems = [item]
         
         let store = TestStore(initialState: StudyItemsFeature.State()) {
             StudyItemsFeature()
@@ -121,13 +121,13 @@ final class StudyItemsFeatureTests: XCTestCase {
         await store.receive(\.itemsLoaded) {
             $0.isLoading = false
             $0.items = IdentifiedArray(uniqueElements: mockItems)
+            $0.selectedItemId = item.id  // Auto-selects first item
         }
     }
     
     func testItemSavedDelegateRefreshesItems() async {
-        let mockItems = [
-            StudyItemState(id: UUID(), title: "New Item", content: "Content")
-        ]
+        let item = StudyItemState(id: UUID(), title: "New Item", content: "Content")
+        let mockItems = [item]
         
         let store = TestStore(initialState: StudyItemsFeature.State(
             addItem: AddStudyItemFeature.State()
@@ -146,6 +146,7 @@ final class StudyItemsFeatureTests: XCTestCase {
         await store.receive(\.itemsLoaded) {
             $0.isLoading = false
             $0.items = IdentifiedArray(uniqueElements: mockItems)
+            $0.selectedItemId = item.id  // Auto-selects first item
         }
     }
 }

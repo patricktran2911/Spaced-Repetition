@@ -79,7 +79,7 @@ struct AddStudyItemFeature {
                 let nextReviewDate = tomorrow
                 
                 return .run { send in
-                    let item = StudyItemState(
+                    let item = await StudyItemState(
                         id: id,
                         title: title,
                         content: content,

@@ -79,7 +79,7 @@ struct ReviewFeature {
                 
                 return .run { send in
                     // Create item inside closure with extracted values
-                    let itemToSave = StudyItemState(
+                    let itemToSave = await StudyItemState(
                         id: itemId,
                         title: title,
                         content: content,
