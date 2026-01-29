@@ -85,67 +85,6 @@ struct ReviewStatusCard: View {
     }
 }
 
-// MARK: - Item Display View
-struct ItemDisplayView: View {
-    let item: StudyItemState
-    let onShowPDF: () -> Void
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text(item.title)
-                .font(.title2)
-                .fontWeight(.bold)
-            
-            Text(item.content)
-                .font(.body)
-            
-            // Images Gallery
-            if !item.allImages.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Images (\(item.allImages.count))")
-                        .font(.headline)
-                    
-                    ImageGalleryView(images: item.allImages)
-                        .frame(height: 200)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-            }
-            
-            // PDF Document
-            if let pdfData = item.pdfData {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("PDF Document")
-                        .font(.headline)
-                    
-                    Button(action: onShowPDF) {
-                        PDFPreviewCard(pdfData: pdfData)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            
-            // Tags
-            if !item.tags.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Tags")
-                        .font(.headline)
-                    
-                    FlowLayout(spacing: 8) {
-                        ForEach(item.tags, id: \.self) { tag in
-                            Text(tag)
-                                .font(.caption)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 5)
-                                .background(Color.accentColor.opacity(0.2))
-                                .clipShape(Capsule())
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
 // MARK: - Item Editing View
 struct ItemEditingView: View {
     @Bindable var store: StoreOf<StudyItemDetailFeature>

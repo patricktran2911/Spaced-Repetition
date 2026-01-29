@@ -285,6 +285,170 @@ struct PDFPreviewCard: View {
     }
 }
 
+// MARK: - Full Screen PDF Viewer
+struct FullScreenPDFViewer: View {
+    let pdfData: Data
+    @Environment(\.dismiss) private var dismiss
+    @State private var currentPage: Int = 0
+    @State private var totalPages: Int = 1
+    @State private var pdfDocument: PDFDocument?
+    @State private var showingThumbnails = false
+    
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color(.systemBackground).ignoresSafeArea()
+                
+                if let document = pdfDocument {
+                    PDFKitView(document: document, currentPage: $currentPage)
+                        .ignoresSafeArea(edges: .bottom)
+                } else {
+                    ContentUnavailableView {
+                        Label("Unable to Load PDF", systemImage: "doc.fill")
+                    } description: {
+                        Text("The PDF file could not be displayed")
+                    }
+                }
+            }
+            .navigationTitle("PDF Viewer")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+                
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showingThumbnails = true
+                    } label: {
+                        Image(systemName: "square.grid.2x2")
+                    }
+                }
+                
+                ToolbarItem(placement: .bottomBar) {
+                    if totalPages > 1 {
+                        HStack(spacing: 20) {
+                            Button {
+                                withAnimation {
+                                    if currentPage > 0 { currentPage -= 1 }
+                                }
+                            } label: {
+                                Image(systemName: "chevron.left.circle.fill")
+                                    .font(.title2)
+                            }
+                            .disabled(currentPage == 0)
+                            
+                            Text("Page \(currentPage + 1) of \(totalPages)")
+                                .font(.subheadline)
+                                .monospacedDigit()
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(Color(.systemGray6))
+                                .clipShape(Capsule())
+                            
+                            Button {
+                                withAnimation {
+                                    if currentPage < totalPages - 1 { currentPage += 1 }
+                                }
+                            } label: {
+                                Image(systemName: "chevron.right.circle.fill")
+                                    .font(.title2)
+                            }
+                            .disabled(currentPage >= totalPages - 1)
+                        }
+                    }
+                }
+            }
+            .sheet(isPresented: $showingThumbnails) {
+                NavigationStack {
+                    PDFThumbnailGrid(pdfData: pdfData) { pageIndex in
+                        currentPage = pageIndex
+                        showingThumbnails = false
+                    }
+                    .navigationTitle("Pages")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("Done") {
+                                showingThumbnails = false
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .onAppear {
+            loadPDF()
+        }
+    }
+    
+    private func loadPDF() {
+        if let document = PDFDocument(data: pdfData) {
+            self.pdfDocument = document
+            self.totalPages = document.pageCount
+        }
+    }
+}
+
+// MARK: - PDFKit View (Full Document)
+struct PDFKitView: UIViewRepresentable {
+    let document: PDFDocument
+    @Binding var currentPage: Int
+    
+    func makeUIView(context: Context) -> PDFView {
+        let pdfView = PDFView()
+        pdfView.displayMode = .singlePageContinuous
+        pdfView.autoScales = true
+        pdfView.displayDirection = .vertical
+        pdfView.backgroundColor = .systemBackground
+        pdfView.document = document
+        
+        NotificationCenter.default.addObserver(
+            context.coordinator,
+            selector: #selector(Coordinator.pageChanged(_:)),
+            name: .PDFViewPageChanged,
+            object: pdfView
+        )
+        
+        return pdfView
+    }
+    
+    func updateUIView(_ pdfView: PDFView, context: Context) {
+        if let page = document.page(at: currentPage),
+           pdfView.currentPage != page {
+            pdfView.go(to: page)
+        }
+    }
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+    
+    class Coordinator: NSObject {
+        var parent: PDFKitView
+        
+        init(_ parent: PDFKitView) {
+            self.parent = parent
+        }
+        
+        @objc func pageChanged(_ notification: Notification) {
+            guard let pdfView = notification.object as? PDFView,
+                  let currentPage = pdfView.currentPage,
+                  let document = pdfView.document else { return }
+            
+            let pageIndex = document.index(for: currentPage)
+            
+            DispatchQueue.main.async {
+                if self.parent.currentPage != pageIndex {
+                    self.parent.currentPage = pageIndex
+                }
+            }
+        }
+    }
+}
+
 #Preview("PDF Page View") {
     // Note: This preview requires actual PDF data
     VStack {

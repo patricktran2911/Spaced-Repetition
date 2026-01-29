@@ -72,7 +72,9 @@ struct StudyItemDetailFeature {
                 
             case .cancelEditTapped:
                 state.isEditing = false
-                return .none
+                return .run { _ in
+                    await dismiss()
+                }
                 
             case .saveEditTapped:
                 guard !state.editedTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,

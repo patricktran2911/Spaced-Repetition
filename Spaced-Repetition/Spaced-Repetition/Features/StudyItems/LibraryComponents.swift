@@ -66,7 +66,7 @@ struct LibraryMenuRow: View {
 struct LibraryContentView: View {
     let item: StudyItemState
     let onEdit: () -> Void
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @State private var showingPDFViewer = false
     
     var body: some View {
         ScrollView {
@@ -127,18 +127,13 @@ struct LibraryContentView: View {
                 }
                 
                 // PDF
-                if item.pdfData != nil {
-                    HStack(spacing: 12) {
-                        Image(systemName: "doc.fill").font(.title2).foregroundStyle(.red)
-                        VStack(alignment: .leading) {
-                            Text("PDF Document").font(.subheadline.bold())
-                            Text("Tap Edit to view").font(.caption).foregroundStyle(.secondary)
-                        }
-                        Spacer()
+                if let pdfData = item.pdfData {
+                    Button {
+                        showingPDFViewer = true
+                    } label: {
+                        PDFPreviewCard(pdfData: pdfData)
                     }
-                    .padding()
-                    .background(Color(.secondarySystemGroupedBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .buttonStyle(.plain)
                 }
                 
                 Spacer(minLength: 120)
@@ -166,6 +161,11 @@ struct LibraryContentView: View {
                 }
                 .padding()
                 .background(Color(.systemBackground))
+            }
+        }
+        .fullScreenCover(isPresented: $showingPDFViewer) {
+            if let pdfData = item.pdfData {
+                FullScreenPDFViewer(pdfData: pdfData)
             }
         }
     }

@@ -120,11 +120,6 @@ struct StudyItemsFeature {
                 
             case let .selectItem(id):
                 state.selectedItemId = id
-                if let id = id, let item = state.items[id: id] {
-                    state.detail = StudyItemDetailFeature.State(item: item)
-                } else {
-                    state.detail = nil
-                }
                 return .none
                 
             case .addItem(.presented(.delegate(.itemSaved))):

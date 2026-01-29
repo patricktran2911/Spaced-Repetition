@@ -32,11 +32,6 @@ struct StudyItemDetailView: View {
                         selectedPhotoItems: $selectedPhotoItems,
                         onShowPDFPicker: { showingPDFPicker = true }
                     )
-                } else {
-                    ItemDisplayView(
-                        item: store.item,
-                        onShowPDF: { showFullScreenPDF = true }
-                    )
                 }
             }
             .padding()
