@@ -15,8 +15,11 @@ final class StudyItem {
     var content: String
     @Attribute(.externalStorage) var imageData: Data?  // Legacy single image
     @Attribute(.externalStorage) var imagesData: [Data]  // Multiple images
-    @Attribute(.externalStorage) var pdfData: Data?  // PDF binary data
+    @Attribute(.externalStorage) var pdfData: Data?  // Legacy single PDF
+    @Attribute(.externalStorage) var pdfDataArray: [Data]  // Multiple PDFs
     var pdfURL: URL?  // Legacy URL reference
+    var url: URL?  // Legacy single URL
+    var urls: [URL]  // Multiple reference URLs
     var createdAt: Date
     var nextReviewDate: Date
     var reviewCount: Int
@@ -31,7 +34,10 @@ final class StudyItem {
         imageData: Data? = nil,
         imagesData: [Data] = [],
         pdfData: Data? = nil,
+        pdfDataArray: [Data] = [],
         pdfURL: URL? = nil,
+        url: URL? = nil,
+        urls: [URL] = [],
         createdAt: Date = Date(),
         nextReviewDate: Date = Date(),
         reviewCount: Int = 0,
@@ -45,7 +51,10 @@ final class StudyItem {
         self.imageData = imageData
         self.imagesData = imagesData
         self.pdfData = pdfData
+        self.pdfDataArray = pdfDataArray
         self.pdfURL = pdfURL
+        self.url = url
+        self.urls = urls
         self.createdAt = createdAt
         self.nextReviewDate = nextReviewDate
         self.reviewCount = reviewCount

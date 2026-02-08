@@ -19,6 +19,8 @@ struct PracticeFeature {
         var isLoading: Bool = false
         var practiceMode: PracticeMode = .all
         var shuffled: Bool = true
+        var dragOffset: CGFloat = 0
+        var cardRotation: Double = 0
         
         var currentItem: StudyItemState? {
             guard currentIndex >= 0 && currentIndex < items.count else { return nil }

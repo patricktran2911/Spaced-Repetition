@@ -3,8 +3,6 @@ import ComposableArchitecture
 
 struct PracticeView: View {
     @Bindable var store: StoreOf<PracticeFeature>
-    @State private var dragOffset: CGFloat = 0
-    @State private var cardRotation: Double = 0
     
     var body: some View {
         NavigationStack {
@@ -27,7 +25,7 @@ struct PracticeView: View {
                 PracticeProgressHeader(current: store.currentIndex + 1, total: store.items.count, progress: store.progress)
                     .padding()
                 Spacer()
-                PracticeFlashcard(item: item, isFlipped: store.isFlipped, dragOffset: dragOffset, rotation: cardRotation)
+                PracticeFlashcard(item: item, isFlipped: store.isFlipped, dragOffset: store.dragOffset, rotation: store.cardRotation)
                     .onTapGesture {
                         withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) { _ = store.send(.flipCard) }
                     }
@@ -46,15 +44,15 @@ struct PracticeView: View {
     private var cardDragGesture: some Gesture {
         DragGesture()
             .onChanged { value in
-                dragOffset = value.translation.width
-                cardRotation = Double(value.translation.width / 20)
+                store.dragOffset = value.translation.width
+                store.cardRotation = Double(value.translation.width / 20)
             }
             .onEnded { value in
                 withAnimation(.spring()) {
                     if value.translation.width > 100 { _ = store.send(.knowIt) }
                     else if value.translation.width < -100 { _ = store.send(.needsWork) }
-                    dragOffset = 0
-                    cardRotation = 0
+                    store.dragOffset = 0
+                    store.cardRotation = 0
                 }
             }
     }

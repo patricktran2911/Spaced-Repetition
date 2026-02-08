@@ -10,8 +10,6 @@ import ComposableArchitecture
 
 struct ReviewView: View {
     @Bindable var store: StoreOf<ReviewFeature>
-    @State private var cardRotation: Double = 0
-    @State private var showFullScreenPDF = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     
     var body: some View {
@@ -50,18 +48,9 @@ struct ReviewView: View {
                 SavingOverlay(message: "Saving...")
             }
         }
-        .fullScreenCover(isPresented: $showFullScreenPDF) {
+        .fullScreenCover(isPresented: $store.showFullScreenPDF) {
             if let pdfData = store.item.pdfData {
-                NavigationStack {
-                    PDFPageView(pdfData: pdfData)
-                        .navigationTitle("PDF Document")
-                        .navigationBarTitleDisplayMode(.inline)
-                        .toolbar {
-                            ToolbarItem(placement: .confirmationAction) {
-                                Button("Done") { showFullScreenPDF = false }
-                            }
-                        }
-                }
+                FullScreenPDFViewer(pdfData: pdfData)
             }
         }
     }
@@ -92,17 +81,17 @@ struct ReviewView: View {
     private var flashcard: some View {
         ZStack {
             FlashcardBackView(item: store.item) { _ in
-                showFullScreenPDF = true
+                store.showFullScreenPDF = true
             }
-            .rotation3DEffect(.degrees(cardRotation - 180), axis: (x: 0, y: 1, z: 0))
-            .opacity(cardRotation > 90 ? 1 : 0)
+            .rotation3DEffect(.degrees(store.cardRotation - 180), axis: (x: 0, y: 1, z: 0))
+            .opacity(store.cardRotation > 90 ? 1 : 0)
             
             FlashcardFrontView(
                 item: store.item,
                 mediaPreview: AnyView(MediaPreviewView(item: store.item))
             )
-            .rotation3DEffect(.degrees(cardRotation), axis: (x: 0, y: 1, z: 0))
-            .opacity(cardRotation < 90 ? 1 : 0)
+            .rotation3DEffect(.degrees(store.cardRotation), axis: (x: 0, y: 1, z: 0))
+            .opacity(store.cardRotation < 90 ? 1 : 0)
         }
         .onTapGesture {
             if !store.showAnswer {
@@ -129,7 +118,7 @@ struct ReviewView: View {
     // MARK: - Flip Animation
     private func flipCard() {
         withAnimation(.spring(duration: 0.5)) {
-            cardRotation = 180
+            store.cardRotation = 180
         }
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {

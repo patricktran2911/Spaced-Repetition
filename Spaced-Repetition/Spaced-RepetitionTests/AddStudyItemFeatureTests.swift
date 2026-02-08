@@ -120,19 +120,42 @@ final class AddStudyItemFeatureTests: XCTestCase {
         }
         
         await store.send(.pdfSelected(pdfData)) {
-            $0.pdfData = pdfData
+            $0.pdfDataArray = [pdfData]
         }
     }
     
     func testRemovePDF() async {
         let pdfData = Data([0x25, 0x50, 0x44, 0x46])
         
-        let store = TestStore(initialState: AddStudyItemFeature.State(pdfData: pdfData)) {
+        let store = TestStore(initialState: AddStudyItemFeature.State(pdfDataArray: [pdfData])) {
             AddStudyItemFeature()
         }
         
-        await store.send(.removePDF) {
-            $0.pdfData = nil
+        await store.send(.removePDF(0)) {
+            $0.pdfDataArray = []
+        }
+    }
+    
+    func testAddUrl() async {
+        let store = TestStore(initialState: AddStudyItemFeature.State(newUrlString: "example.com")) {
+            AddStudyItemFeature()
+        }
+        
+        await store.send(.addUrl) {
+            $0.urls = [URL(string: "https://example.com")!]
+            $0.newUrlString = ""
+        }
+    }
+    
+    func testRemoveUrl() async {
+        let url = URL(string: "https://example.com")!
+        
+        let store = TestStore(initialState: AddStudyItemFeature.State(urls: [url])) {
+            AddStudyItemFeature()
+        }
+        
+        await store.send(.removeUrl(0)) {
+            $0.urls = []
         }
     }
     
@@ -140,8 +163,11 @@ final class AddStudyItemFeatureTests: XCTestCase {
         let stateWithImages = AddStudyItemFeature.State(imagesData: [Data()])
         XCTAssertTrue(stateWithImages.hasMedia)
         
-        let stateWithPDF = AddStudyItemFeature.State(pdfData: Data())
+        let stateWithPDF = AddStudyItemFeature.State(pdfDataArray: [Data()])
         XCTAssertTrue(stateWithPDF.hasMedia)
+        
+        let stateWithURLs = AddStudyItemFeature.State(urls: [URL(string: "https://example.com")!])
+        XCTAssertTrue(stateWithURLs.hasMedia)
         
         let stateWithoutMedia = AddStudyItemFeature.State()
         XCTAssertFalse(stateWithoutMedia.hasMedia)

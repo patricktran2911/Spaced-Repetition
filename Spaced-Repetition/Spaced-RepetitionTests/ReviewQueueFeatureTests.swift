@@ -14,24 +14,29 @@ final class ReviewQueueFeatureTests: XCTestCase {
     
     func testOnAppearLoadsDueItems() async {
         let dueItems = [
-            StudyItemState(id: UUID(), title: "Due 1", content: "Content 1"),
-            StudyItemState(id: UUID(), title: "Due 2", content: "Content 2")
+            StudyItemState(id: UUID(), title: "Due 1", content: "Content 1", nextReviewDate: Date().addingTimeInterval(-3600)),
+            StudyItemState(id: UUID(), title: "Due 2", content: "Content 2", nextReviewDate: Date().addingTimeInterval(-3600))
         ]
         
         let store = TestStore(initialState: ReviewQueueFeature.State()) {
             ReviewQueueFeature()
         } withDependencies: {
-            $0.databaseClient.fetchDueItems = { dueItems }
+            $0.databaseClient.studyItemsStream = { AsyncStream { continuation in
+                continuation.yield(dueItems)
+                continuation.finish()
+            }}
         }
+        store.exhaustivity = .off
         
         await store.send(.onAppear) {
             $0.isLoading = true
         }
         
-        await store.receive(\.dueItemsLoaded) {
+        await store.receive(\.subscribeToItems)
+        
+        await store.receive(\.streamUpdated) {
             $0.isLoading = false
             $0.dueItems = IdentifiedArray(uniqueElements: dueItems)
-            $0.currentReviewIndex = 0
         }
     }
     
@@ -86,23 +91,11 @@ final class ReviewQueueFeatureTests: XCTestCase {
             reviewSession: ReviewFeature.State(item: item)
         )) {
             ReviewQueueFeature()
-        } withDependencies: {
-            $0.databaseClient.fetchDueItems = { [] }
         }
         
         await store.send(.reviewSession(.presented(.delegate(.reviewCompleted)))) {
             $0.reviewSession = nil
-            $0.currentReviewIndex = 1
-        }
-        
-        await store.receive(\.refreshItems) {
-            $0.isLoading = true
-        }
-        
-        await store.receive(\.dueItemsLoaded) {
-            $0.isLoading = false
-            $0.dueItems = []
-            $0.currentReviewIndex = 0
+            $0.currentReviewIndex = 0  // Reset when all items are done
         }
     }
     

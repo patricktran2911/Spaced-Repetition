@@ -16,9 +16,12 @@ struct ReviewFeature {
         var showAnswer: Bool = false
         var startTime: Date = Date()
         var isSubmitting: Bool = false
+        var cardRotation: Double = 0
+        var showFullScreenPDF: Bool = false
     }
     
-    enum Action {
+    enum Action: BindableAction {
+        case binding(BindingAction<State>)
         case showAnswerTapped
         case rateQuality(Int)
         case cancelTapped
@@ -36,8 +39,13 @@ struct ReviewFeature {
     @Dependency(\.date.now) var now
     
     var body: some Reducer<State, Action> {
+        BindingReducer()
+        
         Reduce { state, action in
             switch action {
+            case .binding:
+                return .none
+                
             case .showAnswerTapped:
                 state.showAnswer = true
                 return .none

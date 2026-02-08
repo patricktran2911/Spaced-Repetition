@@ -7,6 +7,8 @@
 
 import Foundation
 import ComposableArchitecture
+import PhotosUI
+import SwiftUI
 
 @Reducer
 struct StudyItemDetailFeature {
@@ -19,10 +21,64 @@ struct StudyItemDetailFeature {
         var editedTags: [String] = []
         var newTag: String = ""
         var editedImagesData: [Data] = []
-        var editedPdfData: Data?
+        var editedPdfDataArray: [Data] = []  // Multiple PDFs
+        var editedUrls: [URL] = []  // Multiple URLs
+        var newUrlString: String = ""  // For adding new URLs
         var isSaving: Bool = false
         var showingDeleteConfirmation: Bool = false
+        var selectedPhotoItems: [PhotosPickerItem] = []
+        var showingPDFPicker: Bool = false
+        var showFullScreenPDF: Bool = false
+        var showFullScreenPDFIndex: Int? = nil  // Track which PDF to show
         @Presents var reviewSession: ReviewFeature.State?
+        
+        // Section editing navigation
+        enum EditSection: Equatable, Hashable {
+            case content
+            case images
+            case pdfs
+            case urls
+            case tags
+        }
+        var activeEditSection: EditSection? = nil
+        
+        // Legacy compatibility
+        var editedPdfData: Data? {
+            get { editedPdfDataArray.first }
+            set {
+                if let data = newValue {
+                    if editedPdfDataArray.isEmpty {
+                        editedPdfDataArray = [data]
+                    } else {
+                        editedPdfDataArray[0] = data
+                    }
+                } else {
+                    if !editedPdfDataArray.isEmpty {
+                        editedPdfDataArray.removeFirst()
+                    }
+                }
+            }
+        }
+        
+        static func == (lhs: State, rhs: State) -> Bool {
+            lhs.item == rhs.item &&
+            lhs.isEditing == rhs.isEditing &&
+            lhs.editedTitle == rhs.editedTitle &&
+            lhs.editedContent == rhs.editedContent &&
+            lhs.editedTags == rhs.editedTags &&
+            lhs.newTag == rhs.newTag &&
+            lhs.editedImagesData == rhs.editedImagesData &&
+            lhs.editedPdfDataArray == rhs.editedPdfDataArray &&
+            lhs.editedUrls == rhs.editedUrls &&
+            lhs.newUrlString == rhs.newUrlString &&
+            lhs.isSaving == rhs.isSaving &&
+            lhs.showingDeleteConfirmation == rhs.showingDeleteConfirmation &&
+            lhs.showingPDFPicker == rhs.showingPDFPicker &&
+            lhs.showFullScreenPDF == rhs.showFullScreenPDF &&
+            lhs.showFullScreenPDFIndex == rhs.showFullScreenPDFIndex &&
+            lhs.reviewSession == rhs.reviewSession &&
+            lhs.activeEditSection == rhs.activeEditSection
+        }
     }
     
     enum Action: BindableAction {
@@ -39,9 +95,14 @@ struct StudyItemDetailFeature {
         case imageSelected(Data)
         case removeImage(Int)
         case pdfSelected(Data)
-        case removePDF
+        case removePDF(Int)
+        case addUrl
+        case removeUrl(Int)
+        case photoItemsChanged([PhotosPickerItem])
         case reviewCompletedFetchedItem(StudyItemState?)
         case reviewSession(PresentationAction<ReviewFeature.Action>)
+        case editSectionTapped(State.EditSection?)
+        case dismissEditSection
         case delegate(Delegate)
         
         enum Delegate: Equatable {
@@ -67,7 +128,8 @@ struct StudyItemDetailFeature {
                 state.editedContent = state.item.content
                 state.editedTags = state.item.tags
                 state.editedImagesData = state.item.imagesData
-                state.editedPdfData = state.item.pdfData
+                state.editedPdfDataArray = state.item.allPDFs
+                state.editedUrls = state.item.allURLs
                 return .none
                 
             case .cancelEditTapped:
@@ -90,7 +152,8 @@ struct StudyItemDetailFeature {
                 updatedItem.content = state.editedContent.trimmingCharacters(in: .whitespacesAndNewlines)
                 updatedItem.tags = state.editedTags
                 updatedItem.imagesData = state.editedImagesData
-                updatedItem.pdfData = state.editedPdfData
+                updatedItem.pdfDataArray = state.editedPdfDataArray
+                updatedItem.urls = state.editedUrls
                 
                 // Update local state immediately
                 state.item = updatedItem
@@ -102,7 +165,10 @@ struct StudyItemDetailFeature {
                 let imageData = updatedItem.imageData
                 let imagesData = updatedItem.imagesData
                 let pdfData = updatedItem.pdfData
+                let pdfDataArray = updatedItem.pdfDataArray
                 let pdfURL = updatedItem.pdfURL
+                let url = updatedItem.url
+                let urls = updatedItem.urls
                 let nextReviewDate = updatedItem.nextReviewDate
                 let reviewCount = updatedItem.reviewCount
                 let easeFactor = updatedItem.easeFactor
@@ -117,7 +183,10 @@ struct StudyItemDetailFeature {
                         imageData: imageData,
                         imagesData: imagesData,
                         pdfData: pdfData,
+                        pdfDataArray: pdfDataArray,
                         pdfURL: pdfURL,
+                        url: url,
+                        urls: urls,
                         nextReviewDate: nextReviewDate,
                         reviewCount: reviewCount,
                         easeFactor: easeFactor,
@@ -168,11 +237,44 @@ struct StudyItemDetailFeature {
                 return .none
                 
             case let .pdfSelected(data):
-                state.editedPdfData = data
+                state.editedPdfDataArray.append(data)
                 return .none
                 
-            case .removePDF:
-                state.editedPdfData = nil
+            case let .removePDF(index):
+                guard index < state.editedPdfDataArray.count else { return .none }
+                state.editedPdfDataArray.remove(at: index)
+                return .none
+                
+            case .addUrl:
+                let urlString = state.newUrlString.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !urlString.isEmpty,
+                      let url = URL(string: urlString),
+                      !state.editedUrls.contains(url) else { return .none }
+                state.editedUrls.append(url)
+                state.newUrlString = ""
+                return .none
+                
+            case let .removeUrl(index):
+                guard index < state.editedUrls.count else { return .none }
+                state.editedUrls.remove(at: index)
+                return .none
+                
+            case let .photoItemsChanged(items):
+                state.selectedPhotoItems = items
+                return .run { send in
+                    for item in items {
+                        if let data = try? await item.loadTransferable(type: Data.self) {
+                            await send(.imageSelected(data))
+                        }
+                    }
+                }
+                
+            case let .editSectionTapped(section):
+                state.activeEditSection = section
+                return .none
+                
+            case .dismissEditSection:
+                state.activeEditSection = nil
                 return .none
                 
             case .reviewSession(.presented(.delegate(.reviewCompleted))):

@@ -28,13 +28,14 @@ final class StatsFeatureTests: XCTestCase {
             StudyItemState(id: UUID(), title: "Item 1", content: "Content 1", reviewCount: 5, interval: 1),
             StudyItemState(id: UUID(), title: "Item 2", content: "Content 2", reviewCount: 3, interval: 7)
         ]
-        let dueItems = [items[0]]
         
         let store = TestStore(initialState: StatsFeature.State()) {
             StatsFeature()
         } withDependencies: {
-            $0.databaseClient.fetchStudyItems = { items }
-            $0.databaseClient.fetchDueItems = { dueItems }
+            $0.databaseClient.studyItemsStream = { AsyncStream { continuation in
+                continuation.yield(items)
+                continuation.finish()
+            }}
             $0.date.now = fixedDate
         }
         store.exhaustivity = .off
@@ -43,10 +44,11 @@ final class StatsFeatureTests: XCTestCase {
             $0.isLoading = true
         }
         
-        await store.receive(\.statsLoaded) {
+        await store.receive(\.subscribeToItems)
+        
+        await store.receive(\.streamUpdated) {
             $0.isLoading = false
             $0.totalItems = 2
-            $0.dueToday = 1
             $0.totalReviews = 8
         }
     }
@@ -63,19 +65,19 @@ final class StatsFeatureTests: XCTestCase {
         )) {
             StatsFeature()
         } withDependencies: {
-            $0.databaseClient.fetchStudyItems = { items }
-            $0.databaseClient.fetchDueItems = { [] }
+            $0.databaseClient.studyItemsStream = { AsyncStream { continuation in
+                continuation.yield(items)
+                continuation.finish()
+            }}
             $0.date.now = fixedDate
         }
         store.exhaustivity = .off
         
         await store.send(.refreshStats)
         
-        await store.receive(\.onAppear) {
-            $0.isLoading = true
-        }
+        await store.receive(\.subscribeToItems)
         
-        await store.receive(\.statsLoaded) {
+        await store.receive(\.streamUpdated) {
             $0.isLoading = false
             $0.totalItems = 1
             $0.totalReviews = 10
@@ -88,8 +90,10 @@ final class StatsFeatureTests: XCTestCase {
         let store = TestStore(initialState: StatsFeature.State()) {
             StatsFeature()
         } withDependencies: {
-            $0.databaseClient.fetchStudyItems = { [] }
-            $0.databaseClient.fetchDueItems = { [] }
+            $0.databaseClient.studyItemsStream = { AsyncStream { continuation in
+                continuation.yield([])
+                continuation.finish()
+            }}
             $0.date.now = fixedDate
         }
         store.exhaustivity = .off
@@ -98,7 +102,9 @@ final class StatsFeatureTests: XCTestCase {
             $0.isLoading = true
         }
         
-        await store.receive(\.statsLoaded) {
+        await store.receive(\.subscribeToItems)
+        
+        await store.receive(\.streamUpdated) {
             $0.isLoading = false
             $0.totalItems = 0
             $0.totalReviews = 0

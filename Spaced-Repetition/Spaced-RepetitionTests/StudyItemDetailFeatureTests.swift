@@ -166,7 +166,7 @@ final class StudyItemDetailFeatureTests: XCTestCase {
         }
         
         await store.send(.pdfSelected(pdfData)) {
-            $0.editedPdfData = pdfData
+            $0.editedPdfDataArray = [pdfData]
         }
     }
     
@@ -177,13 +177,13 @@ final class StudyItemDetailFeatureTests: XCTestCase {
         let store = TestStore(initialState: StudyItemDetailFeature.State(
             item: item,
             isEditing: true,
-            editedPdfData: pdfData
+            editedPdfDataArray: [pdfData]
         )) {
             StudyItemDetailFeature()
         }
         
-        await store.send(.removePDF) {
-            $0.editedPdfData = nil
+        await store.send(.removePDF(0)) {
+            $0.editedPdfDataArray = []
         }
     }
 }

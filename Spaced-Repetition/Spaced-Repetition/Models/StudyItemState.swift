@@ -14,8 +14,11 @@ struct StudyItemState: Equatable, Identifiable, Sendable {
     var content: String
     var imageData: Data?  // Legacy single image
     var imagesData: [Data]  // Multiple images
-    var pdfData: Data?  // PDF binary data
+    var pdfData: Data?  // Legacy single PDF
+    var pdfDataArray: [Data]  // Multiple PDFs
     var pdfURL: URL?  // Legacy URL reference
+    var url: URL?  // Legacy single URL
+    var urls: [URL]  // Multiple reference URLs
     var createdAt: Date
     var nextReviewDate: Date
     var reviewCount: Int
@@ -32,8 +35,26 @@ struct StudyItemState: Equatable, Identifiable, Sendable {
         return images
     }
     
+    // Computed property to get all PDFs (combining legacy + new)
+    var allPDFs: [Data] {
+        var pdfs = pdfDataArray
+        if let legacy = pdfData, !pdfs.contains(legacy) {
+            pdfs.insert(legacy, at: 0)
+        }
+        return pdfs
+    }
+    
+    // Computed property to get all URLs (combining legacy + new)
+    var allURLs: [URL] {
+        var allUrls = urls
+        if let legacy = url, !allUrls.contains(legacy) {
+            allUrls.insert(legacy, at: 0)
+        }
+        return allUrls
+    }
+    
     var hasMedia: Bool {
-        !allImages.isEmpty || pdfData != nil || pdfURL != nil
+        !allImages.isEmpty || !allPDFs.isEmpty || pdfURL != nil || !allURLs.isEmpty
     }
     
     init(from item: StudyItem) {
@@ -43,7 +64,10 @@ struct StudyItemState: Equatable, Identifiable, Sendable {
         self.imageData = item.imageData
         self.imagesData = item.imagesData
         self.pdfData = item.pdfData
+        self.pdfDataArray = item.pdfDataArray
         self.pdfURL = item.pdfURL
+        self.url = item.url
+        self.urls = item.urls
         self.createdAt = item.createdAt
         self.nextReviewDate = item.nextReviewDate
         self.reviewCount = item.reviewCount
@@ -59,7 +83,10 @@ struct StudyItemState: Equatable, Identifiable, Sendable {
         imageData: Data? = nil,
         imagesData: [Data] = [],
         pdfData: Data? = nil,
+        pdfDataArray: [Data] = [],
         pdfURL: URL? = nil,
+        url: URL? = nil,
+        urls: [URL] = [],
         createdAt: Date = Date(),
         nextReviewDate: Date = Date(),
         reviewCount: Int = 0,
@@ -73,7 +100,10 @@ struct StudyItemState: Equatable, Identifiable, Sendable {
         self.imageData = imageData
         self.imagesData = imagesData
         self.pdfData = pdfData
+        self.pdfDataArray = pdfDataArray
         self.pdfURL = pdfURL
+        self.url = url
+        self.urls = urls
         self.createdAt = createdAt
         self.nextReviewDate = nextReviewDate
         self.reviewCount = reviewCount
@@ -90,7 +120,10 @@ struct StudyItemState: Equatable, Identifiable, Sendable {
             imageData: imageData,
             imagesData: imagesData,
             pdfData: pdfData,
+            pdfDataArray: pdfDataArray,
             pdfURL: pdfURL,
+            url: url,
+            urls: urls,
             createdAt: createdAt,
             nextReviewDate: nextReviewDate,
             reviewCount: reviewCount,

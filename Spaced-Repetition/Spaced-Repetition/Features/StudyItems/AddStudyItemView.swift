@@ -12,14 +12,8 @@ import UniformTypeIdentifiers
 
 struct AddStudyItemView: View {
     @Bindable var store: StoreOf<AddStudyItemFeature>
-    @State private var selectedPhotoItems: [PhotosPickerItem] = []
-    @State private var showingPDFPicker = false
-    @FocusState private var focusedField: Field?
+    @FocusState private var focusedField: AddStudyItemField?
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    
-    enum Field {
-        case title, content, tag
-    }
     
     var body: some View {
         Form {
@@ -48,8 +42,33 @@ struct AddStudyItemView: View {
             }
             
             // PDF Section
-            Section("PDF Document") {
+            Section {
                 pdfSection
+            } header: {
+                HStack {
+                    Text("PDF Documents")
+                    Spacer()
+                    if !store.pdfDataArray.isEmpty {
+                        Text("\(store.pdfDataArray.count)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            
+            // URLs Section
+            Section {
+                urlsSection
+            } header: {
+                HStack {
+                    Text("Reference URLs")
+                    Spacer()
+                    if !store.urls.isEmpty {
+                        Text("\(store.urls.count)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
             }
             
             // Tags Section
@@ -91,11 +110,17 @@ struct AddStudyItemView: View {
             }
         }
         .fileImporter(
-            isPresented: $showingPDFPicker,
+            isPresented: $store.showingPDFPicker,
             allowedContentTypes: [.pdf],
-            allowsMultipleSelection: false
+            allowsMultipleSelection: true
         ) { result in
             handlePDFImport(result)
+        }
+        .onChange(of: focusedField) { _, newValue in
+            store.send(.focusedFieldChanged(newValue))
+        }
+        .onChange(of: store.focusedField) { _, newValue in
+            focusedField = newValue
         }
     }
     
@@ -134,21 +159,14 @@ struct AddStudyItemView: View {
             
             // Add images button
             PhotosPicker(
-                selection: $selectedPhotoItems,
+                selection: $store.selectedPhotoItems,
                 maxSelectionCount: 10,
                 matching: .images
             ) {
                 Label("Add Images", systemImage: "photo.on.rectangle.angled")
             }
-            .onChange(of: selectedPhotoItems) { _, newItems in
-                Task {
-                    for item in newItems {
-                        if let data = try? await item.loadTransferable(type: Data.self) {
-                            store.send(.imageSelected(data))
-                        }
-                    }
-                    selectedPhotoItems = []
-                }
+            .onChange(of: store.selectedPhotoItems) { _, newItems in
+                store.send(.photoItemsChanged(newItems))
             }
         }
     }
@@ -156,18 +174,80 @@ struct AddStudyItemView: View {
     // MARK: - PDF Section
     private var pdfSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            if let pdfData = store.pdfData {
-                PDFPreviewCard(pdfData: pdfData)
+            // PDF list
+            if !store.pdfDataArray.isEmpty {
+                ForEach(Array(store.pdfDataArray.enumerated()), id: \.offset) { index, pdfData in
+                    HStack {
+                        PDFPreviewCard(pdfData: pdfData)
+                        
+                        Spacer()
+                        
+                        Button {
+                            store.send(.removePDF(index))
+                        } label: {
+                            Image(systemName: "trash")
+                                .foregroundColor(.red)
+                        }
+                    }
+                }
+            }
+            
+            // Add PDF button
+            Button {
+                store.send(.binding(.set(\.showingPDFPicker, true)))
+            } label: {
+                Label("Add PDF", systemImage: "doc.badge.plus")
+            }
+        }
+    }
+    
+    // MARK: - URLs Section
+    private var urlsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // URL list
+            if !store.urls.isEmpty {
+                ForEach(Array(store.urls.enumerated()), id: \.offset) { index, url in
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(url.host ?? url.absoluteString)
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .lineLimit(1)
+                            
+                            Text(url.absoluteString)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                        
+                        Spacer()
+                        
+                        Button {
+                            store.send(.removeUrl(index))
+                        } label: {
+                            Image(systemName: "trash")
+                                .foregroundColor(.red)
+                        }
+                    }
+                }
+            }
+            
+            // Add URL input
+            HStack {
+                TextField("Enter URL (e.g., example.com)", text: $store.newUrlString)
+                    .textContentType(.URL)
+                    .keyboardType(.URL)
+                    .autocapitalization(.none)
+                    .onSubmit {
+                        store.send(.addUrl)
+                    }
                 
-                Button("Remove PDF", role: .destructive) {
-                    store.send(.removePDF)
-                }
-            } else {
                 Button {
-                    showingPDFPicker = true
+                    store.send(.addUrl)
                 } label: {
-                    Label("Import PDF", systemImage: "doc.badge.plus")
+                    Image(systemName: "plus.circle.fill")
                 }
+                .disabled(store.newUrlString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
     }
@@ -206,14 +286,14 @@ struct AddStudyItemView: View {
     private func handlePDFImport(_ result: Result<[URL], Error>) {
         switch result {
         case .success(let urls):
-            guard let url = urls.first else { return }
-            
-            // Start accessing security-scoped resource
-            guard url.startAccessingSecurityScopedResource() else { return }
-            defer { url.stopAccessingSecurityScopedResource() }
-            
-            if let data = try? Data(contentsOf: url) {
-                store.send(.pdfSelected(data))
+            for url in urls {
+                // Start accessing security-scoped resource
+                guard url.startAccessingSecurityScopedResource() else { continue }
+                defer { url.stopAccessingSecurityScopedResource() }
+                
+                if let data = try? Data(contentsOf: url) {
+                    store.send(.pdfSelected(data))
+                }
             }
             
         case .failure(let error):

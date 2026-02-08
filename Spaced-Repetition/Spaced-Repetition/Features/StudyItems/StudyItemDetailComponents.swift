@@ -92,116 +92,146 @@ struct ItemEditingView: View {
     let onShowPDFPicker: () -> Void
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            // Title
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Title").font(.headline)
-                TextField("Title", text: $store.editedTitle)
-                    .textFieldStyle(.roundedBorder)
+        VStack(spacing: 16) {
+            // Content Section
+            EditableSectionCard(
+                title: "Content",
+                icon: "doc.text",
+                subtitle: store.editedTitle.isEmpty ? "Add title and content" : store.editedTitle,
+                count: nil,
+                accentColor: .blue
+            ) {
+                store.send(.editSectionTapped(.content))
             }
             
-            // Content
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Content").font(.headline)
-                TextField("Content", text: $store.editedContent, axis: .vertical)
-                    .textFieldStyle(.roundedBorder)
-                    .lineLimit(5...10)
+            // Images Section
+            EditableSectionCard(
+                title: "Images",
+                icon: "photo.on.rectangle.angled",
+                subtitle: store.editedImagesData.isEmpty ? "Add images" : "\(store.editedImagesData.count) image\(store.editedImagesData.count == 1 ? "" : "s")",
+                count: store.editedImagesData.count,
+                accentColor: .green
+            ) {
+                store.send(.editSectionTapped(.images))
             }
             
-            // Images
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text("Images").font(.headline)
-                    Spacer()
-                    Text("\(store.editedImagesData.count)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                
-                if !store.editedImagesData.isEmpty {
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                        ForEach(Array(store.editedImagesData.enumerated()), id: \.offset) { index, imageData in
-                            if let uiImage = UIImage(data: imageData) {
-                                ZStack(alignment: .topTrailing) {
-                                    Image(uiImage: uiImage)
-                                        .resizable()
-                                        .scaledToFill()
-                                        .frame(height: 80)
-                                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                                    
-                                    Button { store.send(.removeImage(index)) } label: {
-                                        Image(systemName: "xmark.circle.fill")
-                                            .foregroundStyle(.white, .red)
-                                            .font(.title3)
-                                    }
-                                    .offset(x: 5, y: -5)
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                PhotosPicker(selection: $selectedPhotoItems, maxSelectionCount: 10, matching: .images) {
-                    Label("Add Images", systemImage: "photo.on.rectangle.angled")
-                }
-                .onChange(of: selectedPhotoItems) { _, newItems in
-                    Task {
-                        for item in newItems {
-                            if let data = try? await item.loadTransferable(type: Data.self) {
-                                store.send(.imageSelected(data))
-                            }
-                        }
-                        selectedPhotoItems = []
-                    }
-                }
+            // PDFs Section
+            EditableSectionCard(
+                title: "PDF Documents",
+                icon: "doc.text.fill",
+                subtitle: store.editedPdfDataArray.isEmpty ? "Add PDF files" : "\(store.editedPdfDataArray.count) document\(store.editedPdfDataArray.count == 1 ? "" : "s")",
+                count: store.editedPdfDataArray.count,
+                accentColor: .red
+            ) {
+                store.send(.editSectionTapped(.pdfs))
             }
             
-            // PDF
-            VStack(alignment: .leading, spacing: 8) {
-                Text("PDF Document").font(.headline)
-                
-                if let pdfData = store.editedPdfData {
-                    PDFPreviewCard(pdfData: pdfData)
-                    Button("Remove PDF", role: .destructive) { store.send(.removePDF) }
-                } else {
-                    Button(action: onShowPDFPicker) {
-                        Label("Import PDF", systemImage: "doc.badge.plus")
-                    }
-                }
+            // URLs Section
+            EditableSectionCard(
+                title: "Reference URLs",
+                icon: "link",
+                subtitle: store.editedUrls.isEmpty ? "Add URLs" : "\(store.editedUrls.count) link\(store.editedUrls.count == 1 ? "" : "s")",
+                count: store.editedUrls.count,
+                accentColor: .purple
+            ) {
+                store.send(.editSectionTapped(.urls))
             }
             
-            // Tags
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Tags").font(.headline)
-                
-                if !store.editedTags.isEmpty {
-                    FlowLayout(spacing: 8) {
-                        ForEach(store.editedTags, id: \.self) { tag in
-                            HStack(spacing: 4) {
-                                Text(tag).font(.caption)
-                                Button { store.send(.removeTag(tag)) } label: {
-                                    Image(systemName: "xmark.circle.fill").font(.caption)
-                                }
-                            }
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.accentColor.opacity(0.2))
-                            .clipShape(Capsule())
-                        }
-                    }
-                }
-                
-                HStack {
-                    TextField("Add tag", text: $store.newTag)
-                        .textFieldStyle(.roundedBorder)
-                        .onSubmit { store.send(.addTag) }
-                    
-                    Button { store.send(.addTag) } label: {
-                        Image(systemName: "plus.circle.fill")
-                    }
-                    .disabled(store.newTag.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
+            // Tags Section
+            EditableSectionCard(
+                title: "Tags",
+                icon: "tag.fill",
+                subtitle: store.editedTags.isEmpty ? "Add tags" : store.editedTags.joined(separator: ", "),
+                count: store.editedTags.count,
+                accentColor: .orange
+            ) {
+                store.send(.editSectionTapped(.tags))
             }
         }
+        .sheet(item: $store.activeEditSection.sending(\.editSectionTapped)) { section in
+            sectionEditorView(for: section)
+        }
     }
+    
+    @ViewBuilder
+    private func sectionEditorView(for section: StudyItemDetailFeature.State.EditSection) -> some View {
+        switch section {
+        case .content:
+            ContentEditorView(store: store)
+        case .images:
+            ImagesEditorView(store: store)
+        case .pdfs:
+            PDFsEditorView(store: store)
+        case .urls:
+            URLsEditorView(store: store)
+        case .tags:
+            TagsEditorView(store: store)
+        }
+    }
+}
+
+// MARK: - Editable Section Card
+struct EditableSectionCard: View {
+    let title: String
+    let icon: String
+    let subtitle: String
+    let count: Int?
+    let accentColor: Color
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                // Icon
+                Image(systemName: icon)
+                    .font(.title2)
+                    .foregroundStyle(accentColor)
+                    .frame(width: 44, height: 44)
+                    .background(accentColor.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                
+                // Content
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack {
+                        Text(title)
+                            .font(.headline)
+                            .foregroundStyle(.primary)
+                        
+                        if let count, count > 0 {
+                            Text("\(count)")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 2)
+                                .background(accentColor)
+                                .clipShape(Capsule())
+                        }
+                    }
+                    
+                    Text(subtitle)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                
+                Spacer()
+                
+                // Chevron
+                Image(systemName: "chevron.right")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.tertiary)
+            }
+            .padding()
+            .background(Color(.systemGray6))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Section Identifiable Extension
+extension StudyItemDetailFeature.State.EditSection: Identifiable {
+    var id: Self { self }
 }

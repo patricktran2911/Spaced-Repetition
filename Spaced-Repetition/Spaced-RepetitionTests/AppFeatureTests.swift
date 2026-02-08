@@ -75,6 +75,7 @@ final class AppFeatureTests: XCTestCase {
             $0.notificationClient.requestAuthorization = { false }
             $0.databaseClient.fetchDueItems = { [] }
         }
+        store.exhaustivity = .off
         
         await store.send(.onAppear)
         

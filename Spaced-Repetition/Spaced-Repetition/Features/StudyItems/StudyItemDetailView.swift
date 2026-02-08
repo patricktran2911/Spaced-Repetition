@@ -12,9 +12,6 @@ import UniformTypeIdentifiers
 
 struct StudyItemDetailView: View {
     @Bindable var store: StoreOf<StudyItemDetailFeature>
-    @State private var selectedPhotoItems: [PhotosPickerItem] = []
-    @State private var showingPDFPicker = false
-    @State private var showFullScreenPDF = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     
     var body: some View {
@@ -29,9 +26,12 @@ struct StudyItemDetailView: View {
                 if store.isEditing {
                     ItemEditingView(
                         store: store,
-                        selectedPhotoItems: $selectedPhotoItems,
-                        onShowPDFPicker: { showingPDFPicker = true }
+                        selectedPhotoItems: $store.selectedPhotoItems,
+                        onShowPDFPicker: { store.showingPDFPicker = true }
                     )
+                    .onChange(of: store.selectedPhotoItems) { _, newItems in
+                        store.send(.photoItemsChanged(newItems))
+                    }
                 }
             }
             .padding()
@@ -90,26 +90,18 @@ struct StudyItemDetailView: View {
             }
         }
         .fileImporter(
-            isPresented: $showingPDFPicker,
+            isPresented: $store.showingPDFPicker,
             allowedContentTypes: [.pdf],
             allowsMultipleSelection: false
         ) { result in
             handlePDFImport(result)
         }
-        .fullScreenCover(isPresented: $showFullScreenPDF) {
-            if let pdfData = store.item.pdfData {
-                NavigationStack {
-                    PDFPageView(pdfData: pdfData)
-                        .navigationTitle("PDF Document")
-                        .navigationBarTitleDisplayMode(.inline)
-                        .toolbar {
-                            ToolbarItem(placement: .confirmationAction) {
-                                Button("Done") {
-                                    showFullScreenPDF = false
-                                }
-                            }
-                        }
-                }
+        .fullScreenCover(isPresented: $store.showFullScreenPDF) {
+            if let index = store.showFullScreenPDFIndex,
+               index < store.item.allPDFs.count {
+                FullScreenPDFViewer(pdfData: store.item.allPDFs[index])
+            } else if let pdfData = store.item.allPDFs.first {
+                FullScreenPDFViewer(pdfData: pdfData)
             }
         }
         .disabled(store.isSaving)

@@ -7,6 +7,12 @@
 
 import Foundation
 import ComposableArchitecture
+import PhotosUI
+import SwiftUI
+
+enum AddStudyItemField: Equatable, Sendable, Hashable {
+    case title, content, tag
+}
 
 @Reducer
 struct AddStudyItemFeature {
@@ -15,10 +21,33 @@ struct AddStudyItemFeature {
         var title: String = ""
         var content: String = ""
         var imagesData: [Data] = []
-        var pdfData: Data?
+        var pdfDataArray: [Data] = []  // Multiple PDFs
+        var urls: [URL] = []  // Multiple URLs
+        var newUrlString: String = ""  // For adding new URLs
         var tags: [String] = []
         var newTag: String = ""
         var isSaving: Bool = false
+        var selectedPhotoItems: [PhotosPickerItem] = []
+        var showingPDFPicker: Bool = false
+        var focusedField: AddStudyItemField?
+        
+        // Legacy compatibility
+        var pdfData: Data? {
+            get { pdfDataArray.first }
+            set {
+                if let data = newValue {
+                    if pdfDataArray.isEmpty {
+                        pdfDataArray = [data]
+                    } else {
+                        pdfDataArray[0] = data
+                    }
+                } else {
+                    if !pdfDataArray.isEmpty {
+                        pdfDataArray.removeFirst()
+                    }
+                }
+            }
+        }
         
         var isValid: Bool {
             !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
@@ -26,8 +55,9 @@ struct AddStudyItemFeature {
         }
         
         var hasMedia: Bool {
-            !imagesData.isEmpty || pdfData != nil
+            !imagesData.isEmpty || !pdfDataArray.isEmpty || !urls.isEmpty
         }
+        
     }
     
     enum Action: BindableAction {
@@ -39,7 +69,11 @@ struct AddStudyItemFeature {
         case imageSelected(Data)
         case removeImage(Int)
         case pdfSelected(Data)
-        case removePDF
+        case removePDF(Int)
+        case addUrl
+        case removeUrl(Int)
+        case photoItemsChanged([PhotosPickerItem])
+        case focusedFieldChanged(AddStudyItemField?)
         case delegate(Delegate)
         
         @CasePathable
@@ -73,7 +107,8 @@ struct AddStudyItemFeature {
                 let title = state.title.trimmingCharacters(in: .whitespacesAndNewlines)
                 let content = state.content.trimmingCharacters(in: .whitespacesAndNewlines)
                 let imagesData = state.imagesData
-                let pdfData = state.pdfData
+                let pdfDataArray = state.pdfDataArray
+                let urls = state.urls
                 let tags = state.tags
                 let createdAt = now
                 let nextReviewDate = tomorrow
@@ -84,7 +119,8 @@ struct AddStudyItemFeature {
                         title: title,
                         content: content,
                         imagesData: imagesData,
-                        pdfData: pdfData,
+                        pdfDataArray: pdfDataArray,
+                        urls: urls,
                         createdAt: createdAt,
                         nextReviewDate: nextReviewDate,
                         reviewCount: 0,
@@ -122,11 +158,47 @@ struct AddStudyItemFeature {
                 return .none
                 
             case let .pdfSelected(data):
-                state.pdfData = data
+                state.pdfDataArray.append(data)
                 return .none
                 
-            case .removePDF:
-                state.pdfData = nil
+            case let .removePDF(index):
+                guard index < state.pdfDataArray.count else { return .none }
+                state.pdfDataArray.remove(at: index)
+                return .none
+                
+            case .addUrl:
+                let urlString = state.newUrlString.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !urlString.isEmpty else { return .none }
+                
+                // Add https:// if no scheme is provided
+                var finalUrlString = urlString
+                if !urlString.lowercased().hasPrefix("http://") && !urlString.lowercased().hasPrefix("https://") {
+                    finalUrlString = "https://" + urlString
+                }
+                
+                guard let url = URL(string: finalUrlString),
+                      !state.urls.contains(url) else { return .none }
+                state.urls.append(url)
+                state.newUrlString = ""
+                return .none
+                
+            case let .removeUrl(index):
+                guard index < state.urls.count else { return .none }
+                state.urls.remove(at: index)
+                return .none
+                
+            case let .photoItemsChanged(items):
+                state.selectedPhotoItems = items
+                return .run { send in
+                    for item in items {
+                        if let data = try? await item.loadTransferable(type: Data.self) {
+                            await send(.imageSelected(data))
+                        }
+                    }
+                }
+                
+            case let .focusedFieldChanged(field):
+                state.focusedField = field
                 return .none
                 
             case .delegate:

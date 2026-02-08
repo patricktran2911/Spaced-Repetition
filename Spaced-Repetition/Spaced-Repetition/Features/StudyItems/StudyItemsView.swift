@@ -10,7 +10,6 @@ import ComposableArchitecture
 
 struct StudyItemsView: View {
     @Bindable var store: StoreOf<StudyItemsFeature>
-    @State private var showMenu = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     
     var body: some View {
@@ -52,12 +51,12 @@ struct StudyItemsView: View {
         ZStack {
             mainContent
             
-            if showMenu {
+            if store.showMenu {
                 fullScreenMenu
                     .transition(.move(edge: .leading))
             }
         }
-        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: showMenu)
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: store.showMenu)
         .onAppear { store.send(.onAppear) }
         .sheet(item: $store.scope(state: \.addItem, action: \.addItem)) { addStore in
             NavigationStack { AddStudyItemView(store: addStore) }
@@ -163,12 +162,12 @@ struct StudyItemsView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
-                        withAnimation { showMenu = true }
+                        withAnimation { store.showMenu = true }
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: "list.bullet")
                                 .font(.title3)
-                            if store.items.count > 0 && !showMenu {
+                            if store.items.count > 0 && !store.showMenu {
                                 Text("\(store.items.count)")
                                     .font(.caption.bold())
                                     .padding(.horizontal, 6)
@@ -192,7 +191,7 @@ struct StudyItemsView: View {
                     .font(.largeTitle.bold())
                 Spacer()
                 Button {
-                    withAnimation { showMenu = false }
+                    withAnimation { store.showMenu = false }
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(.title)
@@ -225,7 +224,7 @@ struct StudyItemsView: View {
                 LazyVStack(spacing: 0) {
                     Button {
                         store.send(.addItemTapped)
-                        withAnimation { showMenu = false }
+                        withAnimation { store.showMenu = false }
                     } label: {
                         HStack(spacing: 14) {
                             ZStack {
@@ -266,7 +265,7 @@ struct StudyItemsView: View {
                             LibraryMenuRow(item: item, isSelected: store.selectedItemId == item.id)
                                 .onTapGesture {
                                     store.send(.selectItem(item.id))
-                                    withAnimation { showMenu = false }
+                                    withAnimation { store.showMenu = false }
                                 }
                         }
                     }
@@ -278,7 +277,7 @@ struct StudyItemsView: View {
             DragGesture()
                 .onEnded { value in
                     if value.translation.width < -50 {
-                        withAnimation { showMenu = false }
+                        withAnimation { store.showMenu = false }
                     }
                 }
         )
@@ -353,7 +352,7 @@ struct StudyItemsView: View {
                 .multilineTextAlignment(.center)
             
             Button {
-                withAnimation { showMenu = true }
+                withAnimation { store.showMenu = true }
             } label: {
                 HStack {
                     Image(systemName: "list.bullet")

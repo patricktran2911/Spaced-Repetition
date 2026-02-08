@@ -16,6 +16,7 @@ struct StudyItemsFeature {
         var isLoading: Bool = false
         var searchText: String = ""
         var selectedItemId: UUID?
+        var showMenu: Bool = false
         @Presents var addItem: AddStudyItemFeature.State?
         @Presents var detail: StudyItemDetailFeature.State?
         
